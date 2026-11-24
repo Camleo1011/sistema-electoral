@@ -1,0 +1,19 @@
+:root {
+  --navy: #073971;
+  --red: #c20000;
+  --accent-red: #db214c;
+  --cyan: #01a0c6;
+  --green: #37644a;
+  --cream: #ffffd9;
+  --winner: #ffffa0;
+  --pale-blue: #e6f6fa;
+  --paper: #fff;
+  --canvas: #f2f7fb;
+  --ink: #20252d;
+  --muted: #4b5460;
+  --line: #bcc8d4;
+  --focus: #073971;
+  --font-body: "Arial Narrow", "Liberation Sans", Arial, sans-serif;
+  --space: 1rem;
+  --radius: .35rem;
+}

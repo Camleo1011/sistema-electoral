@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Prototipo de consulta de resultados electorales de Colombia con datos de ejemplo.">
+  <title>Guía Electoral de Colombia</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/estilos.css">
+  <script src="data/ejemplo-local.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  <main id="contenido">
+    <section class="welcome" id="bienvenida" aria-labelledby="titulo-bienvenida">
+      <img class="welcome-image" src="assets/portada.jpg" width="792" height="1309"
+        alt="Escudo de Colombia sobre una cinta tricolor y la Casa de Nariño iluminada">
+      <div class="welcome-actions">
+        <h1 id="titulo-bienvenida" tabindex="-1">Guía Electoral de Colombia</h1>
+        <p>¡Para estrategias… documéntese!</p>
+        <a class="button button-light" href="#resultados">Bienvenidos</a>
+      </div>
+    </section>
+
+    <section class="screen" id="resultados" aria-labelledby="titulo-resultados" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-resultados" tabindex="-1">Resultados electorales</h1>
+      </header>
+      <p class="intro">Información de mayor a menor votación de listas y candidatos de elección popular del orden nacional, regional y local.</p>
+      <nav aria-label="Elecciones">
+        <ul class="election-menu">
+          <li><a class="election-link" href="#presidencia">Presidente <span>y vicepresidente</span></a></li>
+          <li><span class="election-link unavailable" aria-disabled="true">Senado <small>No disponible</small></span></li>
+          <li><span class="election-link unavailable" aria-disabled="true">Cámara <small>No disponible</small></span></li>
+          <li><span class="election-link unavailable" aria-disabled="true">Gobernadores <small>y asambleas · No disponible</small></span></li>
+          <li><span class="election-link unavailable" aria-disabled="true">Alcaldes <small>Concejos y JAL · No disponible</small></span></li>
+          <li><span class="election-link unavailable" aria-disabled="true">Partidos y movimientos <small>No disponible</small></span></li>
+        </ul>
+      </nav>
+      <p class="return"><a href="#bienvenida">Volver a la bienvenida</a></p>
+    </section>
+
+    <section class="screen" id="presidencia" aria-labelledby="titulo-presidencia" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-presidencia" tabindex="-1">Presidente y vicepresidente</h1>
+      </header>
+      <p class="notice">Datos de ejemplo — no oficiales</p>
+      <p class="intro">Consulte la votación por departamento y capital, consulado por país o localidad de Bogotá D. C.</p>
+      <form class="filters" aria-label="Filtros de resultados" role="search" id="filtros">
+        <label for="periodo">Período
+          <select id="periodo" disabled>
+            <option value="2022">2022 – 2026</option>
+            <option value="2026" selected>2026 – 2030</option>
+            <option value="2030" disabled>2030 – 2034 (no activado)</option>
+          </select>
+        </label>
+        <label for="vuelta">Vuelta
+          <select id="vuelta" disabled>
+            <option value="1">Primera vuelta</option>
+            <option value="2">Segunda vuelta</option>
+          </select>
+        </label>
+        <label for="territorio">Departamento / consulado
+          <select id="territorio" disabled></select>
+        </label>
+        <label for="subdivision">Capital / localidad
+          <select id="subdivision" disabled></select>
+        </label>
+        <label for="buscar">Buscar fórmula o partido
+          <input id="buscar" type="search" placeholder="Nombre o sigla" disabled>
+        </label>
+        <label for="orden">Ordenar por
+          <select id="orden" disabled>
+            <option value="national">Votación nacional (mayor a menor)</option>
+            <option value="territory">Votación territorial (mayor a menor)</option>
+            <option value="name">Nombre de la fórmula (A–Z)</option>
+          </select>
+        </label>
+      </form>
+      <p class="table-status" id="estado" role="status"></p>
+      <button type="button" class="button" id="reintentar" hidden>Reintentar la carga</button>
+      <div class="table-frame" id="tabla-contenedor" role="region" aria-labelledby="tabla-titulo" tabindex="0" hidden>
+        <table>
+          <caption id="tabla-titulo">Votación de la elección</caption>
+          <thead>
+            <tr>
+              <th scope="col" id="col-candidatos">Candidatos</th>
+              <th scope="col">Part.</th>
+              <th scope="col" id="col-nacional">Total nacional</th>
+              <th scope="col" id="col-territorio">Territorio</th>
+              <th scope="col" id="col-subdivision">Capital / localidad</th>
+            </tr>
+          </thead>
+          <tbody id="candidatos"></tbody>
+          <tfoot id="resumen"></tfoot>
+        </table>
+      </div>
+      <p class="return"><a href="#resultados">Regresar a resultados</a></p>
+    </section>
+  </main>
+  <footer class="site-footer">Guía Electoral de Colombia · Prototipo académico</footer>
+  <noscript><p class="notice">Active JavaScript para navegar y consultar los resultados.</p></noscript>
+</body>
+</html>
