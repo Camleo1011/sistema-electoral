@@ -374,6 +374,27 @@ function makeSimpleMeta({ count, seed, prefix }) {
   }));
 }
 
+function markWinner(candidatos, key) {
+  const ganador = candidatos.reduce((mejor, candidato) =>
+    candidato.votos[key] > mejor.votos[key] ? candidato : mejor,
+  );
+  for (const candidato of candidatos) candidato.ganador = candidato === ganador;
+}
+
+function collectElected(listas, primary, subdivisions) {
+  return listas.flatMap((lista) => lista.candidatos
+    .filter((candidato) => candidato.elegido)
+    .map((candidato) => ({
+      nombre: candidato.nombre,
+      sigla: lista.sigla,
+      total: candidato.votos[primary],
+      mayores: subdivisions
+        .map((key) => ({ territorio: nombresPorClave[key], votos: candidato.votos[key] }))
+        .sort((a, b) => b.votos - a.votos)
+        .slice(0, 3),
+    })));
+}
+
 function buildRegional({ territories, seats, mode, listCount, candidatesPerList, seed, prefix }) {
   const container = {};
   const elegidos = [];
@@ -385,24 +406,14 @@ function buildRegional({ territories, seats, mode, listCount, candidatesPerList,
       ? buildListas(keys, makeListasMeta({ count: listCount, candidatesPerList, seed: seed + index * 13, prefix: `${prefix}-${territoryId}` }), seed + index * 97)
       : buildSimple(keys, makeSimpleMeta({ count: candidatesPerList, seed: seed + index * 13, prefix: `${prefix}-${territoryId}` }), seed + index * 97);
     if (mode === 'listas') {
-      const primary = territoryId === 'consulados' ? 'consulados' : territoryId;
-      markElectedFromListas(node.listas, primary, seats);
-      for (const lista of node.listas) {
-        for (const candidato of lista.candidatos) {
-          if (!candidato.elegido) continue;
-          elegidos.push({
-            nombre: candidato.nombre,
-            sigla: lista.sigla,
-
-            total: candidato.votos[primary],
-            mayores: territoryId === 'consulados'
-              ? clavePaises.map((key) => ({ territorio: nombresPorClave[key], votos: candidato.votos[key] })).sort((a, b) => b.votos - a.votos).slice(0, 3)
-              : claveMunicipiosPorDepto[territoryId]
-                ? claveMunicipiosPorDepto[territoryId].map((key) => ({ territorio: nombresPorClave[key], votos: candidato.votos[key] })).sort((a, b) => b.votos - a.votos).slice(0, 3)
-                : [],
-          });
-        }
-      }
+      markElectedFromListas(node.listas, territoryId, seats);
+      const subdivisions = territoryId === 'consulados'
+        ? clavePaises
+        : territoryId === 'bogota' ? claveLocalidades : claveMunicipiosPorDepto[territoryId];
+      node.elegidos = collectElected(node.listas, territoryId, subdivisions);
+      elegidos.push(...node.elegidos);
+    } else {
+      markWinner(node.candidatos, territoryId);
     }
     container[territoryId] = node;
   });
@@ -415,7 +426,12 @@ function buildLocal({ territories, seats, mode, listCount, candidatesPerList, se
     const node = mode === 'listas'
       ? buildListas([territoryId], makeListasMeta({ count: listCount, candidatesPerList, seed: seed + index * 17, prefix: `${prefix}-${territoryId}` }), seed + index * 53)
       : buildSimple([territoryId], makeSimpleMeta({ count: candidatesPerList, seed: seed + index * 17, prefix: `${prefix}-${territoryId}` }), seed + index * 53);
-    if (mode === 'listas') markElectedFromListas(node.listas, territoryId, seats);
+    if (mode === 'listas') {
+      markElectedFromListas(node.listas, territoryId, seats);
+      node.elegidos = collectElected(node.listas, territoryId, []);
+    } else {
+      markWinner(node.candidatos, territoryId);
+    }
     container[territoryId] = node;
   });
   return { territorios: container };
@@ -448,6 +464,7 @@ function buildPresidencia(year, round, seed) {
     nombre: `${entry.nombre} / ${makeNames(1, seed + entry.nombre.length)[0]}`,
   }));
   const node = buildSimple(GLOBAL_KEYS, meta, seed + 3);
+  if (round === '2') markWinner(node.candidatos, 'nacional');
   return {
     fecha: year === '2022' ? (round === '1' ? '2022-05-29' : '2022-06-19') : (round === '1' ? '2026-05-31' : '2026-06-21'),
     niveles: nivelNacional,
@@ -472,35 +489,22 @@ for (const year of ['2022', '2026']) {
   const indigena = buildListas(GLOBAL_KEYS, indigenaMeta, Number(year) + 257);
   markElectedFromListas(indigena.listas, 'nacional', 2);
 
-  const elegidos = [];
-  for (const [circunstancia, node] of [['Nacional', nacional], ['Indígena', indigena]]) {
-    const flat = [];
-    for (const lista of node.listas) {
-      for (const candidato of lista.candidatos) {
-        flat.push({ lista, candidato });
-      }
-    }
-    flat
-      .filter((item) => item.candidato.elegido)
-      .sort((a, b) => b.candidato.votos.nacional - a.candidato.votos.nacional)
-      .forEach((item) => {
-        elegidos.push({
-          circunscripcion: circunstancia,
-          nombre: item.candidato.nombre,
-          sigla: item.lista.sigla,
-
-          total: item.candidato.votos.nacional,
-          mayores: [...claveDepartamentos, 'bogota', 'consulados']
-            .map((key) => ({ territorio: nombresPorClave[key], votos: item.candidato.votos[key] }))
-            .sort((a, b) => b.votos - a.votos)
-            .slice(0, 3),
-        });
-      });
-  }
-
+  const subdivisions = [...claveDepartamentos, 'bogota', 'consulados'];
   resultados.senado[year] = {
-    nacional: { fecha, niveles: nivelNacional, tipoResaltado: 'elegido', ...nacional, elegidos },
-    indigena: { fecha, niveles: nivelNacional, tipoResaltado: 'elegido', ...indigena, elegidos },
+    nacional: {
+      fecha,
+      niveles: nivelNacional,
+      tipoResaltado: 'elegido',
+      ...nacional,
+      elegidos: collectElected(nacional.listas, 'nacional', subdivisions),
+    },
+    indigena: {
+      fecha,
+      niveles: nivelNacional,
+      tipoResaltado: 'elegido',
+      ...indigena,
+      elegidos: collectElected(indigena.listas, 'nacional', subdivisions),
+    },
   };
 }
 
@@ -785,6 +789,11 @@ const output = {
     nota: 'Cifras ficticias con fines académicos. No corresponden a resultados oficiales.',
   },
   partidos: PARTIDOS,
+  // Ambos cortes son muestras académicas. No representan registros históricos.
+  cortesPartidos: {
+    2022: PARTIDOS.slice(0, 24),
+    2026: PARTIDOS,
+  },
   territorios,
   dignidades,
   resultados,

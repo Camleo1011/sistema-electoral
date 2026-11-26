@@ -13,7 +13,17 @@ const check = (condition, message) => {
 check(Array.isArray(data.partidos) && data.partidos.length >= 27, 'Faltan partidos políticos');
 check(Array.isArray(data.territorios) && data.territorios.length >= 34, 'Faltan territorios');
 
-const siglas = new Set(data.partidos.map((partido) => partido.sigla));
+const partidos = new Map(data.partidos.map(({ sigla, nombre }) => [sigla, nombre]));
+const siglas = new Set(partidos.keys());
+for (const corte of ['2022', '2026']) {
+  const catalogo = data.cortesPartidos?.[corte];
+  check(Array.isArray(catalogo) && catalogo.length > 0, `Corte de partidos ${corte} vacío o inválido`);
+  if (!Array.isArray(catalogo)) continue;
+  check(catalogo.every(({ sigla, nombre }) => partidos.has(sigla) && partidos.get(sigla) === nombre),
+    `Corte ${corte}: organización no reconocida`);
+  check(new Set(catalogo.map(({ sigla }) => sigla)).size === catalogo.length,
+    `Corte ${corte}: siglas repetidas`);
+}
 const territorioIds = new Set(['nacional']);
 for (const territorio of data.territorios) {
   territorioIds.add(territorio.id);
@@ -67,14 +77,38 @@ function verifyTotals(node, label) {
   nodes += 1;
 }
 
-function verifyElegidos(node, label) {
-  if (!node.elegidos) return;
-  check(Array.isArray(node.elegidos) && node.elegidos.length > 0, `${label}: elegidos vacío`);
-  for (const elegido of node.elegidos) {
+function verifyElegidos(node, label, primary) {
+  const { elegidos, listas } = node;
+  if (!listas && elegidos === undefined) return;
+  const valid = Array.isArray(elegidos) && elegidos.length > 0;
+  check(valid, `${label}: elegidos vacío o inválido`);
+  if (!valid) return;
+  for (const elegido of elegidos) {
     check(typeof elegido.nombre === 'string' && elegido.nombre.length > 3, `${label}: elegido sin nombre`);
     check(siglas.has(elegido.sigla), `${label}: elegido con sigla desconocida`);
     check(Number.isSafeInteger(elegido.total), `${label}: elegido sin total`);
     check(Array.isArray(elegido.mayores) && elegido.mayores.length <= 3, `${label}: elegido sin mayores`);
+  }
+  if (listas) {
+    const clave = ({ nombre, sigla, total }) => JSON.stringify([nombre, sigla, total]);
+    const esperados = listas.flatMap(({ candidatos, sigla }) => candidatos
+      .filter((candidato) => candidato.elegido)
+      .map(({ nombre, votos }) => clave({ nombre, sigla, total: votos[primary] })));
+    const actuales = elegidos.map(clave).sort();
+    check(JSON.stringify(actuales) === JSON.stringify(esperados.sort()),
+      `${label}: elegidos fuera del ámbito de la consulta o votación incorrecta`);
+  }
+}
+
+function verifyGanador(node, label, primary) {
+  const candidatos = node.candidatos ?? [];
+  const ganadores = candidatos.filter((candidato) => candidato.ganador === true);
+  check(candidatos.every((candidato) => typeof candidato.ganador === 'boolean'),
+    `${label}: falta indicador de ganador`);
+  check(ganadores.length === 1, `${label}: la elección debe tener un ganador`);
+  if (ganadores.length === 1) {
+    check(candidatos.every((candidato) => candidato.votos[primary] <= ganadores[0].votos[primary]),
+      `${label}: el ganador no tiene la mayor votación`);
   }
 }
 
@@ -101,12 +135,17 @@ for (const [dignidad, años] of Object.entries(periodos)) {
         check(Object.keys(node.territorios).length > 0, `${label}: sin territorios`);
         for (const [territorio, subnode] of Object.entries(node.territorios)) {
           check(territorioIds.has(territorio), `${label}: territorio desconocido ${territorio}`);
-          verifyTotals(subnode, `${label}[${territorio}]`);
+          const sublabel = `${label}[${territorio}]`;
+          verifyTotals(subnode, sublabel);
+          verifyElegidos(subnode, sublabel, territorio);
+          if (node.tipoResaltado === 'ganador') verifyGanador(subnode, sublabel, territorio);
         }
         verifyElegidos(node, label);
       } else {
+        const primary = variante === 'bogota' ? 'bogota' : 'nacional';
         verifyTotals(node, label);
-        verifyElegidos(node, label);
+        verifyElegidos(node, label, primary);
+        if (node.tipoResaltado === 'ganador') verifyGanador(node, label, primary);
       }
     }
   }
