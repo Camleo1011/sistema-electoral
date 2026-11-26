@@ -254,10 +254,11 @@ const Tabla = (() => {
       { texto: 'Nombres', scope: 'nombre' },
       { texto: 'Part.', scope: null },
       { texto: variante.totalLabel ?? 'Total nacional', scope: 'total' },
-      { texto: 'Mayor votación 1', scope: null },
-      { texto: 'Mayor votación 2', scope: null },
-      { texto: 'Mayor votación 3', scope: null },
     ];
+    const cantidadMayores = variante.elegidosLocales ? 0 : 3;
+    for (let indice = 1; indice <= cantidadMayores; indice += 1) {
+      columnas.push({ texto: `Mayor votación ${indice}`, scope: null });
+    }
     for (const columna of columnas) partes.head.append(encabezado(columna.texto, columna.scope, estado.orden));
 
     for (const elegido of filas) {
@@ -266,10 +267,10 @@ const Tabla = (() => {
       nombre.scope = 'row';
       nombre.textContent = elegido.nombre;
       tr.append(nombre, celda(elegido.sigla), celda(numero(elegido.total)));
-      for (const mayor of elegido.mayores ?? []) {
-        tr.append(celda(`${mayor.territorio} · ${numero(mayor.votos)}`));
+      for (let indice = 0; indice < cantidadMayores; indice += 1) {
+        const mayor = elegido.mayores?.[indice];
+        tr.append(celda(mayor ? `${mayor.territorio} · ${numero(mayor.votos)}` : '—'));
       }
-      for (let index = (elegido.mayores ?? []).length; index < 3; index += 1) tr.append(celda('—'));
       partes.body.append(tr);
     }
 
@@ -282,7 +283,8 @@ const Tabla = (() => {
   function render(partes, vista, variante, nodo, estado) {
     limpiar(partes);
     const fecha = nodo?.fecha ? fechas.format(new Date(nodo.fecha)) : '';
-    partes.caption.textContent = `${vista.titulo} · ${variante.label}${fecha ? ` · ${fecha}` : ''}`;
+    partes.caption.textContent = [vista.titulo, variante.label, variante.ambito, fecha]
+      .filter(Boolean).join(' · ');
     if (!nodo) {
       return { estado: 'No hay datos de ejemplo para la selección.', vacio: true };
     }
@@ -291,13 +293,15 @@ const Tabla = (() => {
     return renderSimple(partes, variante, nodo, estado);
   }
 
-  function renderPartidos(partes, data) {
-    partes.caption.textContent = 'Organizaciones políticas registradas';
+  function renderPartidos(partes, partidos, corte) {
+    partes.caption.textContent = corte
+      ? `Organizaciones políticas · Corte ${corte}`
+      : 'Organizaciones políticas';
     partes.head.replaceChildren();
     partes.body.replaceChildren();
     if (partes.foot) partes.foot.replaceChildren();
     for (const texto of ['N.º', 'Sigla', 'Organización']) partes.head.append(encabezado(texto, null, null));
-    data.partidos.forEach((partido, index) => {
+    partidos.forEach((partido, index) => {
       const tr = document.createElement('tr');
       const numeroCelda = celda(String(index + 1));
       numeroCelda.className = 'num';
@@ -308,7 +312,10 @@ const Tabla = (() => {
       tr.append(numeroCelda, sigla, organizacion);
       partes.body.append(tr);
     });
-    return { estado: `${data.partidos.length} organizaciones políticas`, vacio: false };
+    return {
+      estado: partidos.length ? `${partidos.length} organizaciones políticas` : 'No hay organizaciones para el corte seleccionado.',
+      vacio: partidos.length === 0,
+    };
   }
 
   return { render, renderPartidos, normalizar };

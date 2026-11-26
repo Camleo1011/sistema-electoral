@@ -85,8 +85,8 @@ const VISTAS = {
     defecto: { periodo: '2026' },
     sinTerritorio: true,
     variantes: [
-      { id: 'nacional', label: 'Circunscripción nacional', dignidad: 'senado', key: 'nacional', modo: 'elegidos' },
-      { id: 'indigena', label: 'Circunscripción indígena', dignidad: 'senado', key: 'indigena', modo: 'elegidos' },
+      { id: 'nacional', label: 'Circunscripción nacional', dignidad: 'senado', key: 'nacional', modo: 'elegidos', circunscripcionLegada: 'Nacional' },
+      { id: 'indigena', label: 'Circunscripción indígena', dignidad: 'senado', key: 'indigena', modo: 'elegidos', circunscripcionLegada: 'Indígena' },
     ],
     orden: ['nombre', 'total'],
   },
@@ -159,22 +159,6 @@ const VISTAS = {
       },
     ],
     enlaceElegidos: { vista: 'camara-elegidos', label: 'Lista de elegidos' },
-  },
-
-  'camara-elegidos': {
-    titulo: 'Cámara · Lista de elegidos',
-    intro: 'Candidaturas elegidas por circunscripción, con su votación departamental y sus tres mayores votaciones.',
-    periodosDe: 'camara',
-    defecto: { periodo: '2026' },
-    sinTerritorio: true,
-    variantes: [
-      { id: 'regional', label: 'Regional', dignidad: 'camara', key: 'regional', modo: 'elegidos', totalLabel: 'Total departamental' },
-      { id: 'afro', label: 'Afrodescendientes', dignidad: 'camara', key: 'afro', modo: 'elegidos', totalLabel: 'Total departamental' },
-      { id: 'indigena', label: 'Comunidades indígenas', dignidad: 'camara', key: 'indigena', modo: 'elegidos', totalLabel: 'Total departamental' },
-      { id: 'exterior', label: 'Colombianos en el exterior', dignidad: 'camara', key: 'exterior', modo: 'elegidos', totalLabel: 'Total consular' },
-      { id: 'citrep', label: 'CITREP', dignidad: 'camara', key: 'citrep', modo: 'elegidos', totalLabel: 'Total departamental' },
-    ],
-    orden: ['nombre', 'total'],
   },
 
   gobernaciones: {
@@ -300,11 +284,37 @@ const VISTAS = {
         tipoResaltado: 'elegido',
       },
     ],
+    enlaceElegidos: { vista: 'bogota-elegidos', label: 'Lista de elegidos', variantes: ['concejo', 'jal'] },
+  },
+
+  'bogota-elegidos': {
+    titulo: 'Bogotá D. C. · Lista de elegidos',
+    intro: 'Elegidos del Concejo en el distrito y de la JAL en la localidad seleccionada.',
+    periodosDe: 'alcaldia',
+    defecto: { periodo: '2024', territorio: 'bogota', subdivision: 'bogota-usaquen' },
+    variantes: [
+      { id: 'concejo', label: 'Concejo', dignidad: 'concejo', key: 'bogota', alcance: 'regional', modo: 'elegidos', elegidosLocales: true, ambito: 'Bogotá D. C.', totalLabel: 'Total distrital' },
+      { id: 'jal', label: 'Juntas Administradoras Locales', dignidad: 'jal', key: 'unica', alcance: 'local', modo: 'elegidos', elegidosLocales: true, totalLabel: 'Total de la localidad',
+        territorio: { tipos: ['distrito'], subdivision: 'localidades', label: 'Distrito', subLabel: 'Localidad' } },
+    ],
   },
 
   partidos: {
     titulo: 'Partidos y movimientos políticos',
-    intro: 'Organizaciones políticas con personería jurídica vigente. Siglas y nombres tomados del diseño definitivo.',
+    intro: 'Catálogo de organizaciones políticas de ejemplo por año de corte.',
     modo: 'partidos',
+    defecto: { corte: '2026' },
   },
+};
+
+VISTAS['camara-elegidos'] = {
+  titulo: 'Cámara · Lista de elegidos',
+  intro: 'Elegidos de la circunscripción en el departamento, distrito o consulado seleccionado. La subdivisión indica el desglose consultado.',
+  periodosDe: VISTAS.camara.periodosDe,
+  defecto: VISTAS.camara.defecto,
+  variantes: VISTAS.camara.variantes.map((variante) => ({
+    ...variante,
+    modo: 'elegidos',
+    totalLabel: 'Total del territorio',
+  })),
 };

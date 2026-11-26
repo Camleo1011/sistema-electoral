@@ -54,6 +54,7 @@ function estadoInicial(id) {
   const vista = VISTAS[id];
   const variante = vista.variantes?.[0];
   return {
+    corte: vista.defecto?.corte,
     periodo: vista.defecto?.periodo ?? '',
     variante: variante?.id,
     territorio: vista.defecto?.territorio,
@@ -298,10 +299,45 @@ function nodoDe(variante, periodo) {
 function nodoResuelto(variante, periodo, estado) {
   const raiz = nodoDe(variante, periodo);
   if (!raiz) return null;
-  if (variante.modo === 'elegidos' || variante.alcance === 'nacional') return raiz;
+  if (!variante.alcance || variante.alcance === 'nacional') return raiz;
   if (raiz.candidatos || raiz.listas) return raiz;
   if (variante.alcance === 'regional') return raiz.territorios?.[estado.territorio] ?? null;
   return raiz.territorios?.[estado.subdivision] ?? null;
+}
+
+function conElegidosDelAmbito(nodo, clave, mostrarMayores) {
+  if (!nodo || nodo.elegidos || !nodo.listas) return nodo;
+  const elegidos = nodo.listas.flatMap((lista) => lista.candidatos.filter((candidato) => candidato.elegido).map((candidato) => {
+    const mayores = mostrarMayores
+      ? Object.entries(candidato.votos)
+        .filter(([territorio]) => territorio !== 'nacional' && territorio !== clave)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([territorio, votos]) => ({ territorio: Datos.nombreClave(territorio), votos }))
+      : [];
+    return { nombre: candidato.nombre, sigla: lista.sigla, total: candidato.votos[clave], mayores };
+  }));
+  return { ...nodo, elegidos };
+}
+
+function construirCortes(id) {
+  const mapa = refsDe(id);
+  const { cortesPartidos } = Datos.datosActuales();
+  if (!cortesPartidos) {
+    mapa.filtros.replaceChildren();
+    return;
+  }
+  const estado = estadoDe(id);
+  const cortes = Object.keys(cortesPartidos);
+  const select = crear('select', { id: `${id}-corte`, name: 'corte' });
+  llenarSelect(select, cortes.map((corte) => ({ value: corte, label: corte })), estado.corte);
+  estado.corte = select.value;
+  select.addEventListener('change', () => {
+    estado.corte = select.value;
+    pintar(id);
+  });
+  const label = crear('label', { for: select.id, text: 'Año de corte' }, [select]);
+  mapa.filtros.replaceChildren(crear('div', { class: 'filters' }, [label]));
 }
 
 function pintar(id) {
@@ -311,7 +347,9 @@ function pintar(id) {
   if (!Datos.estaCargado()) return;
 
   if (vista.modo === 'partidos') {
-    const resultado = Tabla.renderPartidos(mapa, Datos.datosActuales());
+    const { cortesPartidos, partidos } = Datos.datosActuales();
+    const corte = cortesPartidos ? estado.corte : undefined;
+    const resultado = Tabla.renderPartidos(mapa, cortesPartidos?.[corte] ?? partidos, corte);
     mapa.estado.textContent = resultado.estado;
     mapa.tabla.hidden = false;
     if (mapa.reintentar) mapa.reintentar.hidden = true;
@@ -320,15 +358,41 @@ function pintar(id) {
 
   const variante = vista.variantes.find((item) => item.id === estado.variante) ?? vista.variantes[0];
   normalizarEstado(vista, variante, estado);
-  const nodo = nodoResuelto(variante, estado.periodo, estado);
-  const resultado = Tabla.render(mapa, vista, variante, nodo, estado);
+  let nodo = nodoResuelto(variante, estado.periodo, estado);
+  let varianteVisible = variante;
+  if (variante.modo === 'elegidos' && variante.alcance) {
+    const ambito = variante.alcance === 'local'
+      ? estado.subdivisionNombre
+      : variante.ambito ?? estado.territorioNombre;
+    varianteVisible = { ...variante, ambito };
+    const clave = variante.alcance === 'local' ? estado.subdivision : estado.territorio;
+    nodo = conElegidosDelAmbito(nodo, clave, !variante.elegidosLocales);
+  }
+  if (variante.circunscripcionLegada && nodo?.elegidos) {
+    const elegidos = nodo.elegidos.filter((elegido) => (
+      !elegido.circunscripcion || elegido.circunscripcion === variante.circunscripcionLegada
+    ));
+    nodo = { ...nodo, elegidos };
+  }
+  const resultado = Tabla.render(mapa, vista, varianteVisible, nodo, estado);
   mapa.estado.textContent = resultado.estado;
   mapa.tabla.hidden = !nodo;
 
   if (mapa.links) {
     mapa.links.replaceChildren();
-    if (vista.enlaceElegidos) {
-      const enlace = crear('a', { href: `#${vista.enlaceElegidos.vista}`, class: 'link-destacado', text: vista.enlaceElegidos.label });
+    const destino = vista.enlaceElegidos;
+    if (destino && (!destino.variantes || destino.variantes.includes(variante.id))) {
+      const enlace = crear('a', { href: `#${destino.vista}`, class: 'link-destacado', text: destino.label });
+      enlace.addEventListener('click', (evento) => {
+        if (evento.ctrlKey || evento.metaKey || evento.shiftKey || evento.altKey) return;
+        const estadoDestino = estadoInicial(destino.vista);
+        estadoDestino.periodo = estado.periodo;
+        estadoDestino.variante = estado.variante;
+        estadoDestino.territorio = estado.territorio;
+        estadoDestino.subdivision = estado.subdivision;
+        estados.set(destino.vista, estadoDestino);
+        construirVista(destino.vista);
+      });
       mapa.links.append(enlace);
     }
   }
@@ -340,13 +404,11 @@ function construirVista(id) {
   const mapa = refsDe(id);
   if (mapa.intro && vista.intro) mapa.intro.textContent = vista.intro;
   construirTabs(id);
-  if (vista.modo === 'partidos' || !Datos.estaCargado()) {
+  if (!Datos.estaCargado()) {
     if (mapa.estado) {
-      mapa.estado.textContent = Datos.estaCargado()
-        ? ''
-        : errorCarga
-          ? 'No se pudieron cargar los resultados de ejemplo. Intente nuevamente.'
-          : 'Cargando datos de ejemplo…';
+      mapa.estado.textContent = errorCarga
+        ? 'No se pudieron cargar los resultados de ejemplo. Intente nuevamente.'
+        : 'Cargando datos de ejemplo…';
     }
     if (mapa.reintentar) {
       mapa.reintentar.hidden = !errorCarga;
@@ -354,7 +416,8 @@ function construirVista(id) {
     }
     return;
   }
-  construirFiltros(id);
+  if (vista.modo === 'partidos') construirCortes(id);
+  else construirFiltros(id);
 }
 
 function mensajeCarga(texto, esError) {
