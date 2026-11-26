@@ -3,11 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Prototipo de consulta de resultados electorales de Colombia con datos de ejemplo.">
+  <meta name="description" content="Prototipo de consulta de resultados electorales de Colombia con datos de ejemplo: presidencia, senado, cámara, gobernaciones, alcaldías y partidos.">
   <title>Guía Electoral de Colombia</title>
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/estilos.css">
-  <script src="data/ejemplo-local.js" defer></script>
+  <script src="js/vistas.js" defer></script>
+  <script src="js/datos.js" defer></script>
+  <script src="js/tabla.js" defer></script>
   <script src="js/app.js" defer></script>
 </head>
 <body>
@@ -31,21 +33,23 @@
         </a>
         <h1 id="titulo-resultados" tabindex="-1">Resultados electorales</h1>
       </header>
-      <p class="intro">Información de mayor a menor votación de listas y candidatos de elección popular del orden nacional, regional y local.</p>
+      <p class="intro">Información de mayor a menor votación de listas y candidatos de elección popular del orden nacional, regional y local. Todos los datos de este prototipo son de ejemplo y no oficiales.</p>
       <nav aria-label="Elecciones">
         <ul class="election-menu">
           <li><a class="election-link" href="#presidencia">Presidente <span>y vicepresidente</span></a></li>
-          <li><span class="election-link unavailable" aria-disabled="true">Senado <small>No disponible</small></span></li>
-          <li><span class="election-link unavailable" aria-disabled="true">Cámara <small>No disponible</small></span></li>
-          <li><span class="election-link unavailable" aria-disabled="true">Gobernadores <small>y asambleas · No disponible</small></span></li>
-          <li><span class="election-link unavailable" aria-disabled="true">Alcaldes <small>Concejos y JAL · No disponible</small></span></li>
-          <li><span class="election-link unavailable" aria-disabled="true">Partidos y movimientos <small>No disponible</small></span></li>
+          <li><a class="election-link" href="#senado">Senado <span>Nacional e indígena</span></a></li>
+          <li><a class="election-link" href="#camara">Cámara <span>Cinco circunscripciones</span></a></li>
+          <li><a class="election-link" href="#gobernaciones">Gobernadores <span>y asambleas</span></a></li>
+          <li><a class="election-link" href="#alcaldias">Alcaldes <span>Concejos y JAL</span></a></li>
+          <li><a class="election-link" href="#bogota">Bogotá D. C. <span>Alcalde, Concejo y JAL</span></a></li>
+          <li><a class="election-link" href="#partidos">Partidos <span>y movimientos políticos</span></a></li>
+          <li><a class="election-link" href="#nosotros">Nosotros <span>La publicación</span></a></li>
         </ul>
       </nav>
       <p class="return"><a href="#bienvenida">Volver a la bienvenida</a></p>
     </section>
 
-    <section class="screen" id="presidencia" aria-labelledby="titulo-presidencia" hidden>
+    <section class="screen results-screen" id="presidencia" aria-labelledby="titulo-presidencia" data-vista="presidencia" hidden>
       <header class="screen-header">
         <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
           <span class="brand-mark" aria-hidden="true">GEC</span>
@@ -54,60 +58,256 @@
         <h1 id="titulo-presidencia" tabindex="-1">Presidente y vicepresidente</h1>
       </header>
       <p class="notice">Datos de ejemplo — no oficiales</p>
-      <p class="intro">Consulte la votación por departamento y capital, consulado por país o localidad de Bogotá D. C.</p>
-      <form class="filters" aria-label="Filtros de resultados" role="search" id="filtros">
-        <label for="periodo">Período
-          <select id="periodo" disabled>
-            <option value="2022">2022 – 2026</option>
-            <option value="2026" selected>2026 – 2030</option>
-            <option value="2030" disabled>2030 – 2034 (no activado)</option>
-          </select>
-        </label>
-        <label for="vuelta">Vuelta
-          <select id="vuelta" disabled>
-            <option value="1">Primera vuelta</option>
-            <option value="2">Segunda vuelta</option>
-          </select>
-        </label>
-        <label for="territorio">Departamento / consulado
-          <select id="territorio" disabled></select>
-        </label>
-        <label for="subdivision">Capital / localidad
-          <select id="subdivision" disabled></select>
-        </label>
-        <label for="buscar">Buscar fórmula o partido
-          <input id="buscar" type="search" placeholder="Nombre o sigla" disabled>
-        </label>
-        <label for="orden">Ordenar por
-          <select id="orden" disabled>
-            <option value="national">Votación nacional (mayor a menor)</option>
-            <option value="territory">Votación territorial (mayor a menor)</option>
-            <option value="name">Nombre de la fórmula (A–Z)</option>
-          </select>
-        </label>
-      </form>
-      <p class="table-status" id="estado" role="status"></p>
-      <button type="button" class="button" id="reintentar" hidden>Reintentar la carga</button>
-      <div class="table-frame" id="tabla-contenedor" role="region" aria-labelledby="tabla-titulo" tabindex="0" hidden>
+      <p class="intro" data-intro></p>
+      <div class="tabs" data-tabs hidden></div>
+      <div data-filtros></div>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-presidencia" tabindex="0" data-tabla hidden>
         <table>
-          <caption id="tabla-titulo">Votación de la elección</caption>
-          <thead>
-            <tr>
-              <th scope="col" id="col-candidatos">Candidatos</th>
-              <th scope="col">Part.</th>
-              <th scope="col" id="col-nacional">Total nacional</th>
-              <th scope="col" id="col-territorio">Territorio</th>
-              <th scope="col" id="col-subdivision">Capital / localidad</th>
-            </tr>
-          </thead>
-          <tbody id="candidatos"></tbody>
-          <tfoot id="resumen"></tfoot>
+          <caption id="tabla-presidencia" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
+          <tfoot data-foot></tfoot>
+        </table>
+      </div>
+      <p class="view-links" data-links></p>
+      <p class="return"><a href="#resultados">Regresar a resultados</a></p>
+    </section>
+
+    <section class="screen results-screen" id="senado" aria-labelledby="titulo-senado" data-vista="senado" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-senado" tabindex="-1">Senado</h1>
+      </header>
+      <p class="notice">Datos de ejemplo — no oficiales</p>
+      <p class="intro" data-intro></p>
+      <div class="tabs" data-tabs hidden></div>
+      <div data-filtros></div>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-senado" tabindex="0" data-tabla hidden>
+        <table>
+          <caption id="tabla-senado" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
+          <tfoot data-foot></tfoot>
+        </table>
+      </div>
+      <p class="view-links" data-links></p>
+      <p class="return"><a href="#resultados">Regresar a resultados</a></p>
+    </section>
+
+    <section class="screen results-screen" id="senado-elegidos" aria-labelledby="titulo-senado-elegidos" data-vista="senado-elegidos" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-senado-elegidos" tabindex="-1">Senado · Lista de elegidos</h1>
+      </header>
+      <p class="notice">Datos de ejemplo — no oficiales</p>
+      <p class="intro" data-intro></p>
+      <div class="tabs" data-tabs hidden></div>
+      <div data-filtros></div>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-senado-elegidos" tabindex="0" data-tabla hidden>
+        <table>
+          <caption id="tabla-senado-elegidos" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
+          <tfoot data-foot></tfoot>
+        </table>
+      </div>
+      <p class="view-links" data-links></p>
+      <p class="return"><a href="#senado">Volver al Senado</a> · <a href="#resultados">Regresar a resultados</a></p>
+    </section>
+
+    <section class="screen results-screen" id="camara" aria-labelledby="titulo-camara" data-vista="camara" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-camara" tabindex="-1">Cámara de Representantes</h1>
+      </header>
+      <p class="notice">Datos de ejemplo — no oficiales</p>
+      <p class="intro" data-intro></p>
+      <div class="tabs" data-tabs hidden></div>
+      <div data-filtros></div>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-camara" tabindex="0" data-tabla hidden>
+        <table>
+          <caption id="tabla-camara" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
+          <tfoot data-foot></tfoot>
+        </table>
+      </div>
+      <p class="view-links" data-links></p>
+      <p class="return"><a href="#resultados">Regresar a resultados</a></p>
+    </section>
+
+    <section class="screen results-screen" id="camara-elegidos" aria-labelledby="titulo-camara-elegidos" data-vista="camara-elegidos" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-camara-elegidos" tabindex="-1">Cámara · Lista de elegidos</h1>
+      </header>
+      <p class="notice">Datos de ejemplo — no oficiales</p>
+      <p class="intro" data-intro></p>
+      <div class="tabs" data-tabs hidden></div>
+      <div data-filtros></div>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-camara-elegidos" tabindex="0" data-tabla hidden>
+        <table>
+          <caption id="tabla-camara-elegidos" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
+          <tfoot data-foot></tfoot>
+        </table>
+      </div>
+      <p class="view-links" data-links></p>
+      <p class="return"><a href="#camara">Volver a la Cámara</a> · <a href="#resultados">Regresar a resultados</a></p>
+    </section>
+
+    <section class="screen results-screen" id="gobernaciones" aria-labelledby="titulo-gobernaciones" data-vista="gobernaciones" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-gobernaciones" tabindex="-1">Gobernaciones y asambleas</h1>
+      </header>
+      <p class="notice">Datos de ejemplo — no oficiales</p>
+      <p class="intro" data-intro></p>
+      <div class="tabs" data-tabs hidden></div>
+      <div data-filtros></div>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-gobernaciones" tabindex="0" data-tabla hidden>
+        <table>
+          <caption id="tabla-gobernaciones" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
+          <tfoot data-foot></tfoot>
+        </table>
+      </div>
+      <p class="view-links" data-links></p>
+      <p class="return"><a href="#resultados">Regresar a resultados</a></p>
+    </section>
+
+    <section class="screen results-screen" id="alcaldias" aria-labelledby="titulo-alcaldias" data-vista="alcaldias" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-alcaldias" tabindex="-1">Alcaldías y concejos</h1>
+      </header>
+      <p class="notice">Datos de ejemplo — no oficiales</p>
+      <p class="intro" data-intro></p>
+      <div class="tabs" data-tabs hidden></div>
+      <div data-filtros></div>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-alcaldias" tabindex="0" data-tabla hidden>
+        <table>
+          <caption id="tabla-alcaldias" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
+          <tfoot data-foot></tfoot>
+        </table>
+      </div>
+      <p class="view-links" data-links></p>
+      <p class="return"><a href="#resultados">Regresar a resultados</a></p>
+    </section>
+
+    <section class="screen results-screen" id="bogota" aria-labelledby="titulo-bogota" data-vista="bogota" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-bogota" tabindex="-1">Bogotá D. C.</h1>
+      </header>
+      <p class="notice">Datos de ejemplo — no oficiales</p>
+      <p class="intro" data-intro></p>
+      <div class="tabs" data-tabs hidden></div>
+      <div data-filtros></div>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-bogota" tabindex="0" data-tabla hidden>
+        <table>
+          <caption id="tabla-bogota" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
+          <tfoot data-foot></tfoot>
+        </table>
+      </div>
+      <p class="view-links" data-links></p>
+      <p class="return"><a href="#resultados">Regresar a resultados</a></p>
+    </section>
+
+    <section class="screen results-screen" id="partidos" aria-labelledby="titulo-partidos" data-vista="partidos" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-partidos" tabindex="-1">Partidos y movimientos políticos</h1>
+      </header>
+      <p class="notice">Organizaciones políticas con personería jurídica vigente</p>
+      <p class="intro" data-intro></p>
+      <p class="table-status" role="status" data-estado></p>
+      <button type="button" class="button" data-reintentar hidden>Reintentar la carga</button>
+      <div class="table-frame" role="region" aria-labelledby="tabla-partidos" tabindex="0" data-tabla hidden>
+        <table>
+          <caption id="tabla-partidos" data-caption></caption>
+          <thead><tr data-head></tr></thead>
+          <tbody data-body></tbody>
         </table>
       </div>
       <p class="return"><a href="#resultados">Regresar a resultados</a></p>
     </section>
+
+    <section class="screen" id="nosotros" aria-labelledby="titulo-nosotros" hidden>
+      <header class="screen-header">
+        <a class="brand" href="#bienvenida" aria-label="Guía Electoral de Colombia, inicio">
+          <span class="brand-mark" aria-hidden="true">GEC</span>
+          <span>Guía Electoral<br>de Colombia</span>
+        </a>
+        <h1 id="titulo-nosotros" tabindex="-1">Nosotros</h1>
+      </header>
+      <h2>Historia de la publicación</h2>
+      <p>La GUÍA ELECTORAL DE COLOMBIA es una publicación especializada en resultados electorales del orden local, regional y nacional, diseñada en Tunja en 1986. Se publicó impresa para varios departamentos del país y en ediciones nacionales como la Asamblea Nacional Constituyente de 1990 y el Plebiscito por la Paz de 2016.</p>
+      <p>Está protegida como marca registrada mediante la Resolución No. 72407 del 25 de octubre de 2016, renovada hasta octubre de 2036 (SIC), con matrícula mercantil No. 219790 de la Cámara de Comercio de Tunja.</p>
+      <h2>Contacto</h2>
+      <ul class="plain-list">
+        <li>Editor: José C. Gil Zapata</li>
+        <li>Dirección: Cr 2 32 49 T1 Ap. 702, Tunja, Colombia</li>
+        <li>Móvil / WhatsApp: (+57) 314 407 7994</li>
+        <li>Correo: josegilza@gmail.com</li>
+        <li>Redes: X, Facebook, Instagram, TikTok, YouTube, WhatsApp y LinkedIn</li>
+      </ul>
+      <h2>Declaración Universal de los Derechos Humanos · Artículo 21</h2>
+      <ol class="plain-list">
+        <li>Toda persona tiene derecho a participar en el gobierno de su país, directamente o por medio de representantes libremente escogidos.</li>
+        <li>Toda persona tiene derecho de acceso, en condiciones de igualdad, a las funciones públicas de su país.</li>
+        <li>La voluntad del pueblo es la base de la autoridad del poder público; esta voluntad se expresará mediante elecciones auténticas que habrán de celebrarse periódicamente, por sufragio universal e igual y por voto secreto u otro procedimiento equivalente que garantice la libertad del voto.</li>
+      </ol>
+      <p class="return"><a href="#resultados">Regresar a resultados</a></p>
+    </section>
   </main>
-  <footer class="site-footer">Guía Electoral de Colombia · Prototipo académico</footer>
+  <footer class="site-footer">Guía Electoral de Colombia · Prototipo académico con datos de ejemplo</footer>
   <noscript><p class="notice">Active JavaScript para navegar y consultar los resultados.</p></noscript>
 </body>
 </html>
