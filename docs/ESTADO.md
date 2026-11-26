@@ -1,9 +1,9 @@
 # ESTADO DEL PROYECTO — Guía Electoral de Colombia (Frontend)
 
-**Versión:** 0.2 · **Fecha:** 2026-11-26
+**Versión:** 0.3 · **Fecha:** 2026-11-26
 
 ## Fase actual
-Fase 5 — Frontend completado: 12 pantallas para las 8 dignidades del documento de requerimientos.
+Fase 5 — Frontend implementado para las 8 dignidades. La prueba cruzada del taller está pendiente.
 
 ## Fases
 | # | Fase | Estado |
@@ -12,7 +12,7 @@ Fase 5 — Frontend completado: 12 pantallas para las 8 dignidades del documento
 | 2 | Modelado | omitida (solo frontend, sin base de datos propia) — ver deuda |
 | 3 | Planificación | completado (stack HTML/CSS/JS puros y modelo de datos JSON) |
 | 4 | Diseño UI/UX | aplicado (tokens y componentes tomados del PDF de diseño) |
-| 5 | Frontend | completado (12 pantallas, 8 dignidades, datos de ejemplo) |
+| 5 | Frontend | completado (13 pantallas, 8 dignidades, datos de ejemplo) |
 | 6 | Backend | no aplica (datos de ejemplo en JSON local) |
 
 ## Fuentes de verdad (raíz del repo)
@@ -35,16 +35,17 @@ Fase 5 — Frontend completado: 12 pantallas para las 8 dignidades del documento
 - Excepción a la convención de idioma: los identificadores nuevos están en español (Datos, Tabla, VISTAS) para mantener continuidad con el prototipo; se acepta como deuda y se revisará si el equipo lo requiere.
 
 ## Preguntas abiertas
-- ¿Se exige una pantalla independiente de «Lista de elegidos» para la JAL? Por ahora los elegidos se resaltan dentro de la pestaña JAL.
+- En Cámara, el SRS usa «CIPREP» y el diseño definitivo usa «CITREP». El prototipo conserva el rótulo del diseño hasta resolver la diferencia entre fuentes.
 
 ## Deuda técnica/documental
 - Fase 2 (modelado de datos) y backend omitidos: los datos son JSON de ejemplo.
 - El JSON de ejemplo pesa ~2,9 MB y su espejo local otro tanto; si la demo se hace con red lenta, reducir la muestra o cargar por dignidad.
-- Prueba cruzada con otro equipo pendiente; Lighthouse y revisión manual a 768 px y 200 % pendientes.
+- Prueba cruzada con otro equipo, Lighthouse y revisión manual al 200 % pendientes.
 - Identificadores nuevos en español (ver decisión 2026-11-26).
 
 ## Historial de cambios
 | Versión | Fecha | Cambio |
 |---|---|---|
 | 0.1 | 2026-11-24 | Creación de estructura y tablero |
-| 0.2 | 2026-11-26 | Frontend completo con las 8 dignidades, datos verificables y docs actualizadas |
+| 0.2 | 2026-11-26 | Frontend para las 8 dignidades y verificación aritmética de los datos |
+| 0.3 | 2026-11-26 | Correcciones de ganador, listados de elegidos, catálogo, carga y orden territorial |

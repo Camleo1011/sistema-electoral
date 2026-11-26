@@ -1,6 +1,6 @@
 # Historias y trazabilidad
 
-Alcance implementado: las ocho dignidades del documento de requerimientos en doce pantallas conectadas. Los datos son de ejemplo y no oficiales.
+Alcance implementado: las ocho dignidades del documento de requerimientos en trece pantallas conectadas. Los datos son de ejemplo y no oficiales.
 
 ## Historias de usuario
 
@@ -12,8 +12,8 @@ Alcance implementado: las ocho dignidades del documento de requerimientos en doc
 | Como visitante, quiero consultar Cámara en sus cinco circunscripciones. | Puedo alternar Regional, Afrodescendientes, Indígenas, Exterior y CITREP; en Exterior el territorio pasa a consulados y el país a subdivisión. |
 | Como visitante, quiero consultar Gobernación y Asamblea por departamento y municipio. | Las pestañas cambian de dignidad; el departamento y el municipio actualizan encabezados y cifras; se muestra el potencial de sufragantes. |
 | Como visitante, quiero consultar Alcaldía y Concejo por municipio. | El departamento filtra los municipios; la tabla muestra la votación municipal; el candidato ganador se resalta. |
-| Como visitante, quiero consultar Bogotá D. C. por localidad. | Alcalde, Concejo y JAL son pestañas; la localidad actualiza las cifras; la JAL resalta elegidos. |
-| Como visitante, quiero consultar los partidos y movimientos políticos. | La tabla lista las 29 organizaciones con número, sigla y nombre. |
+| Como visitante, quiero consultar Bogotá D. C. por localidad. | Alcalde, Concejo y JAL son pestañas; la localidad actualiza las cifras; la JAL resalta elegidos y permite abrir el listado de la localidad. |
+| Como visitante, quiero consultar los partidos y movimientos políticos. | Se pueden consultar los cortes de ejemplo de 2022 y 2026. La tabla muestra número, sigla, nombre y aviso de datos no oficiales. |
 | Como visitante, quiero buscar y ordenar para localizar información. | La búsqueda acepta nombres sin tildes, listas y siglas; el orden por votación nacional, territorial o nombre conserva totales; una búsqueda vacía muestra mensaje. |
 | Como visitante, quiero saber que las cifras son de ejemplo y recuperarme de un error. | El aviso «Datos de ejemplo — no oficiales» permanece visible; si falla la carga aparece un botón para reintentar. |
 
@@ -34,6 +34,22 @@ Alcance implementado: las ocho dignidades del documento de requerimientos en doc
 | Diseño p. 12. Nosotros y Artículo 21. | Nosotros | Contenido estático | TC-20 |
 | Taller. Búsqueda, filtros, orden y estados. | Todas las de resultados | Filtros, buscador, orden y estados | TC-07, TC-08 |
 | Taller. Teclado, contraste y anchos. | Todas | Foco visible, pestañas accesibles, rejilla adaptable | TC-01, TC-02, TC-09, TC-10 |
+
+## Casos del SRS vinculados con la auditoría
+
+| Requisito | Historia y caso de uso | Pantalla | Componentes | Casos |
+| --- | --- | --- | --- | --- |
+| RF-014 | HU-003, CU-003 | PAN-005 | Generador electoral y render de elegidos | CP-014, TC-13 |
+| RF-019 | HU-004, CU-004 | PAN-006 y lista de elegidos de Cámara | Navegación, configuración de Cámara y datos por ámbito | CP-019, TC-14, TC-15 |
+| RF-031 | HU-007, CU-007 | PAN-009 | Vista de Bogotá y listado por localidad | CP-031, TC-18 |
+| RF-032 | HU-008, CU-008 | PAN-010 | Datos de los cortes y render del catálogo | CP-032, TC-19 |
+| RF-037 | HU-010, CU-010 | PAN-003 y otras con ganador o elegidos | Generador electoral y render de candidaturas | CP-037, TC-06, TC-07 |
+| RF-039 | HU-010, CU-010 | PAN-010 y pantallas con datos electorales | Aviso en los resultados y el catálogo | CP-039, TC-19 |
+| RF-042 | HU-010, CU-010 | Pantallas alimentadas por JSON | Cargador de datos y botón de reintento | CP-042 |
+| RF-043 | HU-010, CU-010 | Pantallas con filtros territoriales | Selectores y orden territorial | CP-043, TC-04, TC-16 |
+| RNF-002 y RNF-003 | Transversales | Todas | Navegación, pestañas, foco y estilos adaptables | CP-045, CP-046, TC-01, TC-02, TC-09, TC-10 |
+
+Los resultados de ejecución se registran en [Verificación del prototipo](verificacion.md).
 
 ## Ciclos de trabajo
 

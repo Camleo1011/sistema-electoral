@@ -1,6 +1,6 @@
 # Verificación del prototipo
 
-## Chequeos realizados
+## Chequeos históricos
 
 | Chequeo | Resultado |
 | --- | --- |
@@ -19,13 +19,25 @@
 | Contraste y layout | Revisión visual en Firefox a 375 y 1280 px: cabeceras, pestañas, filtros y tablas sin desbordes de página. |
 | Aritmética visual | Se corrigió la alineación de las filas de resumen con `colSpan` en tablas simples (Part. + Candidatos). |
 
+## Revalidación de las correcciones de auditoría
+
+Ejecutada sobre el árbol de trabajo de la corrección, basado en `4578223`, con Node 24.22.1 y Chrome 158.0.8127.36.
+
+| Comando | Resultado | Casos vinculados |
+| --- | --- | --- |
+| `node frontend/data/verificar.cjs` | Pasó. 850 nodos, 3.594 sumas y 175 claves territoriales. Comprueba ganadores, pertenencia de elegidos y cortes del catálogo. | CP-014, CP-019, CP-031, CP-032, CP-037, CP-038 |
+| `node frontend/tests/navegador.cjs` | Pasó. 13 rutas por HTTP y desde disco, ganador estable al filtrar, elegidos por ámbito, ambos cortes identificados, municipios en orden y reintento tras HTTP 404 o JSON inválido. | CP-014, CP-019, CP-031, CP-032, CP-037, CP-039, CP-042, CP-043 |
+| Mismo comando en Chrome | Pasó. Foco al entrar y activar pestañas, flecha y Tab en Presidencia, sin desbordamiento horizontal de página a 375, 768 y 1280 px. También se probó el reflujo a 384 px como aproximación a 768 px al 200 %. | CP-045, CP-046 (cobertura parcial) |
+
+Los casos restantes del SRS conservan su estado hasta ejecutar su procedimiento completo. La prueba automatizada por navegador cubre escenarios dirigidos de accesibilidad.
+
 ## Revisión pendiente en navegador
 
 Los chequeos automáticos no sustituyen una prueba humana completa.
 
-- [ ] Completar el flujo principal en tres clics o menos y revisar la consola de inicio a fin.
+- [ ] Revisar la consola durante la demostración manual.
 - [ ] Recorrer con Tab, Mayús+Tab y Enter todas las rutas; verificar el desplazamiento de la tabla con teclado.
-- [ ] Revisar a 768 px y al 200 % de zoom.
+- [ ] Revisar manualmente al 200 % de zoom.
 - [ ] Ejecutar Lighthouse y anotar rendimiento y accesibilidad (meta superior a 80).
 - [ ] Abrir la versión desde otro computador y comparar con las páginas 1–12 del diseño.
 - [ ] Medir el tiempo de carga con red lenta: el JSON de ejemplo pesa ~2,9 MB.

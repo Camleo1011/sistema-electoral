@@ -28,6 +28,8 @@ node data/verificar.cjs          # valida totales, referencias y períodos
 
 Cobertura: 32 departamentos con capital y municipios de muestra, Bogotá D. C. con sus 20 localidades + Corferias + Cárceles, y consulados por país. Las cifras son ficticias.
 
+La regresión en navegador se ejecuta desde la raíz con `node frontend/tests/navegador.cjs`. Requiere Chrome o Chromium. Usa `CHROME_BIN` para indicar la ruta al ejecutable si no está en el PATH.
+
 ## Rutas
 
 | Ruta | Pantalla |
@@ -39,15 +41,15 @@ Cobertura: 32 departamentos con capital y municipios de muestra, Bogotá D. C. c
 | `#camara` / `#camara-elegidos` | Cámara, cinco circunscripciones / lista de elegidos |
 | `#gobernaciones` | Gobernación y Asamblea |
 | `#alcaldias` | Alcaldía y Concejo |
-| `#bogota` | Bogotá: Alcalde, Concejo y JAL |
-| `#partidos` | Partidos y movimientos políticos |
+| `#bogota` / `#bogota-elegidos` | Bogotá: Alcalde, Concejo y JAL / elegidos del Concejo o de la JAL consultada |
+| `#partidos` | Partidos y movimientos políticos, con cortes de ejemplo de 2022 y 2026 |
 | `#nosotros` | Historia, contacto y Artículo 21 |
 
 ## Archivos clave
 
 | Archivo | Responsabilidad |
 | --- | --- |
-| `index.html` | Secciones semánticas de las doce pantallas y navegación. |
+| `index.html` | Secciones semánticas de las pantallas y navegación. |
 | `css/tokens.css` | Colores, tipografía, espaciado y radios reutilizables. |
 | `css/estilos.css` | Menú, pestañas, filtros, tablas agrupadas, estados y diseño adaptable. |
 | `js/vistas.js` | Configuración de cada pantalla: períodos, variantes, columnas y alcance. |
