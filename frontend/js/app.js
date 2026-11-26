@@ -133,6 +133,14 @@ function construirTabs(id) {
   mapa.tabs.setAttribute('role', 'tablist');
   mapa.tabs.setAttribute('aria-label', vista.tabsLabel ?? 'Variantes');
   mapa.tabs.replaceChildren();
+  function seleccionar(variante) {
+    estado.variante = variante.id;
+    estado.orden = variante.modo === 'elegidos' ? 'nombre' : variante.columnas[0];
+    construirTabs(id);
+    if (Datos.estaCargado()) construirFiltros(id);
+    pintar(id);
+    document.getElementById(`${id}-tab-${variante.id}`)?.focus();
+  }
   const botones = variantes.map((variante) => {
     const boton = crear('button', {
       type: 'button',
@@ -146,12 +154,7 @@ function construirTabs(id) {
     boton.setAttribute('aria-selected', String(activa));
     boton.tabIndex = activa ? 0 : -1;
     boton.addEventListener('click', () => {
-      if (estado.variante === variante.id) return;
-      estado.variante = variante.id;
-      estado.orden = variante.modo === 'elegidos' ? 'nombre' : variante.columnas[0];
-      construirTabs(id);
-      construirFiltros(id);
-      pintar(id);
+      if (estado.variante !== variante.id) seleccionar(variante);
     });
     boton.addEventListener('keydown', (evento) => {
       const indice = variantes.findIndex((item) => item.id === variante.id);
@@ -162,13 +165,7 @@ function construirTabs(id) {
       else if (evento.key === 'End') destino = variantes.length - 1;
       if (destino === null) return;
       evento.preventDefault();
-      const siguiente = variantes[destino];
-      estado.variante = siguiente.id;
-      estado.orden = siguiente.modo === 'elegidos' ? 'nombre' : siguiente.columnas[0];
-      construirTabs(id);
-      construirFiltros(id);
-      pintar(id);
-      document.getElementById(`${id}-tab-${siguiente.id}`)?.focus();
+      seleccionar(variantes[destino]);
     });
     return boton;
   });
