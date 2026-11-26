@@ -101,7 +101,8 @@ const Tabla = (() => {
   function renderSimple(partes, variante, nodo, estado) {
     const cols = columnasDe(variante, estado);
     const consulta = normalizar(estado.buscar ?? '');
-    const filas = (nodo.candidatos ?? []).filter((candidato) => {
+    const candidatos = nodo.candidatos ?? [];
+    const filas = candidatos.filter((candidato) => {
       if (!consulta) return true;
       const texto = `${candidato.nombre} ${candidato.sigla} ${Datos.nombrePartido(candidato.sigla)}`;
       return normalizar(texto).includes(consulta);
@@ -110,10 +111,14 @@ const Tabla = (() => {
 
     const primario = variante.columnas[0];
     let ganador = null;
-    if (variante.tipoResaltado === 'ganador' && filas.length) {
-      ganador = filas.reduce((mejor, candidato) =>
-        valor(candidato, primario, estado) > valor(mejor, primario, estado) ? candidato : mejor,
-      );
+    if (variante.tipoResaltado === 'ganador' && candidatos.length) {
+      if (candidatos.some((candidato) => typeof candidato.ganador === 'boolean')) {
+        ganador = candidatos.find((candidato) => candidato.ganador === true);
+      } else {
+        ganador = candidatos.reduce((mejor, candidato) =>
+          valor(candidato, primario, estado) > valor(mejor, primario, estado) ? candidato : mejor,
+        );
+      }
     }
 
     const encabezadoCandidatos = encabezado('Candidatos', 'nombre', estado.orden);
@@ -139,7 +144,7 @@ const Tabla = (() => {
     }
 
     resumen(partes, nodo, variante, estado, 2);
-    const total = nodo.candidatos?.length ?? 0;
+    const total = candidatos.length;
     return {
       estado: filas.length
         ? `${filas.length} de ${total} candidaturas`
