@@ -1,18 +1,21 @@
 :root {
-  --navy: #073971;
+  /* Paleta de GuiaElectoral-DiseñoInterfazDefinitivo.pdf */
+  --navy: #063970;
   --red: #c20000;
-  --accent-red: #db214c;
   --cyan: #01a0c6;
+  --on-cyan: #101820;
+  --indigo: #13017c;
   --green: #37644a;
   --cream: #ffffd9;
-  --winner: #ffffa0;
+  --winner: #fffe00;
   --pale-blue: #e6f6fa;
+  --pale-green: #f2fff2;
+  --table-alt: #f2f7fb;
+  --table-summary: #fffff3;
   --paper: #fff;
-  --canvas: #f2f7fb;
-  --ink: #20252d;
-  --muted: #4b5460;
-  --line: #bcc8d4;
-  --focus: #073971;
+  --ink: #3f3f3f;
+  --line: #bfbfc0;
+  --focus: var(--paper);
   --font-body: "Arial Narrow", "Liberation Sans", Arial, sans-serif;
   --space: 1rem;
   --radius: .35rem;
