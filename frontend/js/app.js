@@ -1,225 +1,437 @@
 'use strict';
 
-const routes = ['bienvenida', 'resultados', 'presidencia'];
-const screens = routes.map((route) => document.getElementById(route));
-const filters = document.getElementById('filtros');
-const period = document.getElementById('periodo');
-const round = document.getElementById('vuelta');
-const territory = document.getElementById('territorio');
-const subdivision = document.getElementById('subdivision');
-const search = document.getElementById('buscar');
-const sort = document.getElementById('orden');
-const status = document.getElementById('estado');
-const retry = document.getElementById('reintentar');
-const table = document.getElementById('tabla-contenedor');
-const caption = document.getElementById('tabla-titulo');
-const candidateColumn = document.getElementById('col-candidatos');
-const nationalColumn = document.getElementById('col-nacional');
-const territoryColumn = document.getElementById('col-territorio');
-const subdivisionColumn = document.getElementById('col-subdivision');
-const candidates = document.getElementById('candidatos');
-const summary = document.getElementById('resumen');
+const RUTAS = ['bienvenida', 'resultados', ...Object.keys(VISTAS), 'nosotros'];
 
-const alphabet = new Intl.Collator('es-CO');
-const integer = new Intl.NumberFormat('es-CO');
-const date = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'UTC' });
-const summaryLabels = [
-  ['Votos en Blanco', 'blanco'],
-  ['Votos Nulos', 'nulos'],
-  ['Votos No Marcados', 'noMarcados'],
-];
-const disabledWhileLoading = [period, round, territory, subdivision, search, sort];
-
-let data;
-let attemptedLoad = false;
-
-function normalize(text) {
-  return text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('es-CO').trim();
+const secciones = new Map();
+for (const id of RUTAS) {
+  const seccion = document.getElementById(id);
+  if (seccion) secciones.set(id, seccion);
 }
 
-function namesInOrder(items) {
-  return [...items].sort((a, b) => alphabet.compare(a.nombre, b.nombre));
-}
+const refs = new Map();
+const estados = new Map();
 
-function setOptions(select, items, prompt, preferred) {
-  select.replaceChildren(new Option(prompt, ''));
-  for (const item of items) {
-    select.add(new Option(item.nombre, item.id));
+let cargando = false;
+let errorCarga = false;
+
+function crear(tag, propiedades = {}, hijos = []) {
+  const elemento = document.createElement(tag);
+  for (const [clave, valor] of Object.entries(propiedades)) {
+    if (clave === 'class') elemento.className = valor;
+    else if (clave === 'text') elemento.textContent = valor;
+    else if (clave === 'dataset') Object.assign(elemento.dataset, valor);
+    else if (valor === true) elemento.setAttribute(clave, '');
+    else if (valor !== false && valor != null) elemento.setAttribute(clave, valor);
   }
-  if (items.some((item) => item.id === preferred)) select.value = preferred;
-}
-
-function currentTerritory() {
-  return data.territorios.find((item) => item.id === territory.value);
-}
-
-function updateSubdivisions(preferred) {
-  const region = currentTerritory();
-  const choices = region?.subdivisiones ?? [];
-  const prompt = region?.id === 'consulados' ? 'Todos los países' : 'Todas las subdivisiones';
-  setOptions(subdivision, choices, prompt, preferred);
-  subdivision.disabled = choices.length === 0;
-}
-
-function setView(shouldFocus) {
-  const hash = location.hash.slice(1);
-  const route = routes.includes(hash) ? hash : 'bienvenida';
-  const index = routes.indexOf(route);
-  for (const screen of screens) screen.hidden = screen.id !== route;
-
-  const heading = screens[index].querySelector('h1');
-  document.title = index === 0 ? heading.textContent : `${heading.textContent} | Guía Electoral de Colombia`;
-  if (shouldFocus) {
-    window.scrollTo(0, 0);
-    heading.focus({ preventScroll: true });
+  for (const hijo of [].concat(hijos)) {
+    if (hijo) elemento.append(hijo);
   }
-  if (route === 'presidencia' && !attemptedLoad) loadData();
+  return elemento;
 }
 
-function winnerOf(election) {
-  const first = [...election.candidatos].sort((a, b) => b.votos.nacional - a.votos.nacional);
-  if (first.length === 0 || (first[1]?.votos.nacional === first[0].votos.nacional)) return null;
-  return first[0].id;
-}
-
-function displayCandidates(election, mode, field, query) {
-  const matching = election.candidatos.filter((candidate) => {
-    return normalize(`${candidate.formula} ${candidate.partido}`).includes(query);
-  });
-  if (mode === 'name') {
-    return matching.sort((a, b) => alphabet.compare(a.formula, b.formula));
-  }
-  const key = mode === 'territory' ? field : 'nacional';
-  return matching.sort((a, b) => b.votos[key] - a.votos[key] || alphabet.compare(a.formula, b.formula));
-}
-
-function totalFor(election, key) {
-  const candidateVotes = election.candidatos.reduce((total, candidate) => total + candidate.votos[key], 0);
-  return summaryLabels.reduce((total, [, field]) => total + election[field][key], candidateVotes);
-}
-
-function row(target, label, party, numbers, className, winner) {
-  const tr = target.insertRow();
-  if (className) tr.className = className;
-  const header = document.createElement('th');
-  header.scope = 'row';
-  header.textContent = label;
-  if (winner) {
-    const badge = document.createElement('strong');
-    badge.textContent = 'Fórmula ganadora';
-    header.append(badge);
-  }
-  tr.append(header);
-  for (const value of [party, ...numbers]) {
-    const cell = tr.insertCell();
-    cell.textContent = value;
-  }
-}
-
-function render() {
-  if (!data) return;
-  const election = data.periodos[period.value][round.value];
-  const region = currentTerritory();
-  const place = region?.subdivisiones.find((item) => item.id === subdivision.value);
-  const fields = ['nacional', region?.id, place?.id];
-  const numbers = (getValue) => fields.map((key) => key ? integer.format(getValue(key)) : '—');
-  const visible = displayCandidates(election, sort.value, place?.id ?? region?.id ?? 'nacional', normalize(search.value));
-  const winner = round.value === '2' ? winnerOf(election) : null;
-  const roundName = round.value === '1' ? 'Primera vuelta' : 'Segunda vuelta';
-  const dateLabel = date.format(new Date(election.fecha));
-
-  territoryColumn.textContent = region?.nombre ?? 'Departamento / consulado';
-  subdivisionColumn.textContent = place?.nombre ?? 'Capital / localidad / país';
-  const columnsByOrder = {
-    name: candidateColumn,
-    national: nationalColumn,
-    territory: (place && subdivisionColumn) || (region && territoryColumn) || nationalColumn,
+function refsDe(id) {
+  if (refs.has(id)) return refs.get(id);
+  const seccion = secciones.get(id);
+  const mapa = {
+    seccion,
+    tabs: seccion.querySelector('[data-tabs]'),
+    filtros: seccion.querySelector('[data-filtros]'),
+    estado: seccion.querySelector('[data-estado]'),
+    reintentar: seccion.querySelector('[data-reintentar]'),
+    tabla: seccion.querySelector('[data-tabla]'),
+    caption: seccion.querySelector('[data-caption]'),
+    head: seccion.querySelector('[data-head]'),
+    body: seccion.querySelector('[data-body]'),
+    foot: seccion.querySelector('[data-foot]'),
+    intro: seccion.querySelector('[data-intro]'),
+    links: seccion.querySelector('[data-links]'),
   };
-  for (const column of [candidateColumn, nationalColumn, territoryColumn, subdivisionColumn]) {
-    column.removeAttribute('aria-sort');
-  }
-  columnsByOrder[sort.value].setAttribute('aria-sort', sort.value === 'name' ? 'ascending' : 'descending');
-  caption.textContent = `${roundName} · ${dateLabel}`;
-
-  status.textContent = visible.length
-    ? `${visible.length} de ${election.candidatos.length} fórmulas`
-    : 'No hay fórmulas que coincidan con la búsqueda.';
-  table.hidden = false;
-  candidates.replaceChildren();
-  summary.replaceChildren();
-
-  for (const candidate of visible) {
-    const elected = candidate.id === winner;
-    row(candidates, candidate.formula, candidate.partido, numbers((key) => candidate.votos[key]), elected ? 'winner' : '', elected);
-  }
-  for (const [label, field] of summaryLabels) {
-    row(summary, label, '', numbers((key) => election[field][key]));
-  }
-  row(summary, 'Votación total', '', numbers((key) => totalFor(election, key)), 'total');
-  row(summary, 'Potencial de sufragantes', '', numbers((key) => election.potencial[key]));
+  refs.set(id, mapa);
+  return mapa;
 }
 
-function validateData(input) {
-  if (!Array.isArray(input?.territorios) || input.territorios.length === 0) throw new Error('Faltan territorios');
-  const ids = ['nacional', ...input.territorios.flatMap((region) => [region.id, ...region.subdivisiones.map((place) => place.id)])];
-  for (const year of ['2022', '2026']) {
-    for (const stage of ['1', '2']) {
-      const election = input.periodos?.[year]?.[stage];
-      if (!election?.candidatos?.length || Number.isNaN(Date.parse(election.fecha))) throw new Error('Falta una elección');
-      const maps = [...election.candidatos.map((candidate) => candidate.votos), election.potencial];
-      for (const [, field] of summaryLabels) maps.push(election[field]);
-      for (const map of maps) {
-        if (!ids.every((id) => Number.isSafeInteger(map?.[id]) && map[id] >= 0)) throw new Error('Faltan cifras');
-      }
+function estadoInicial(id) {
+  const vista = VISTAS[id];
+  const variante = vista.variantes?.[0];
+  return {
+    periodo: vista.defecto?.periodo ?? '',
+    variante: variante?.id,
+    territorio: vista.defecto?.territorio,
+    subdivision: vista.defecto?.subdivision,
+    buscar: '',
+    orden: variante?.modo === 'elegidos' ? 'nombre' : variante?.columnas?.[0] ?? 'nombre',
+  };
+}
+
+function estadoDe(id) {
+  if (!estados.has(id)) estados.set(id, estadoInicial(id));
+  return estados.get(id);
+}
+
+function configTerritorio(vista, variante) {
+  return variante?.territorio ?? vista.territorio ?? null;
+}
+
+function normalizarEstado(vista, variante, estado) {
+  const config = configTerritorio(vista, variante);
+  if (!config) return;
+  const opciones = Datos.territorios(config.tipos);
+  if (!opciones.some((territorio) => territorio.id === estado.territorio)) {
+    const preferido = vista.defecto?.territorio;
+    estado.territorio = opciones.some((territorio) => territorio.id === preferido) ? preferido : opciones[0]?.id;
+  }
+  const territorio = opciones.find((item) => item.id === estado.territorio) ?? null;
+  const subdivisions = Datos.subdivisiones(territorio, config.subdivision);
+  if (!subdivisions.some((item) => item.id === estado.subdivision)) {
+    const preferido = vista.defecto?.subdivision;
+    estado.subdivision = subdivisions.some((item) => item.id === preferido) ? preferido : subdivisions[0]?.id;
+  }
+  estado.territorioNombre = territorio?.nombre ?? '';
+  estado.subdivisionNombre = subdivisions.find((item) => item.id === estado.subdivision)?.nombre ?? '';
+}
+
+function opcionesOrden(variante, estado) {
+  if (variante.modo === 'elegidos') {
+    return [
+      { value: 'nombre', label: 'Nombre (A–Z)' },
+      { value: 'total', label: 'Votación (mayor a menor)' },
+    ];
+  }
+  const opciones = [];
+  for (const scope of variante.columnas) {
+    if (scope === 'nacional') opciones.push({ value: 'nacional', label: 'Votación nacional (mayor a menor)' });
+    else if (scope === 'territorio') opciones.push({ value: 'territorio', label: `Votación en ${estado.territorioNombre} (mayor a menor)` });
+    else opciones.push({ value: 'subdivision', label: `Votación en ${estado.subdivisionNombre} (mayor a menor)` });
+  }
+  opciones.push({ value: 'nombre', label: 'Nombre o lista (A–Z)' });
+  return opciones;
+}
+
+function llenarSelect(select, opciones, valor, deshabilitadas = new Set()) {
+  select.replaceChildren();
+  for (const opcion of opciones) {
+    const option = new Option(opcion.label, opcion.value);
+    if (deshabilitadas.has(opcion.value)) option.disabled = true;
+    select.add(option);
+  }
+  if (opciones.some((opcion) => opcion.value === valor)) select.value = valor;
+}
+
+function construirTabs(id) {
+  const vista = VISTAS[id];
+  const mapa = refsDe(id);
+  if (!mapa.tabs) return;
+  if (mapa.tabla && !mapa.tabla.id) mapa.tabla.id = `${id}-panel`;
+  const variantes = vista.variantes ?? [];
+  if (variantes.length <= 1) {
+    mapa.tabs.hidden = true;
+    mapa.tabs.replaceChildren();
+    return;
+  }
+  const estado = estadoDe(id);
+  mapa.tabs.hidden = false;
+  mapa.tabs.setAttribute('role', 'tablist');
+  mapa.tabs.setAttribute('aria-label', vista.tabsLabel ?? 'Variantes');
+  mapa.tabs.replaceChildren();
+  const botones = variantes.map((variante) => {
+    const boton = crear('button', {
+      type: 'button',
+      role: 'tab',
+      class: 'tab',
+      id: `${id}-tab-${variante.id}`,
+      'aria-controls': `${id}-panel`,
+    });
+    boton.textContent = variante.label;
+    const activa = variante.id === estado.variante;
+    boton.setAttribute('aria-selected', String(activa));
+    boton.tabIndex = activa ? 0 : -1;
+    boton.addEventListener('click', () => {
+      if (estado.variante === variante.id) return;
+      estado.variante = variante.id;
+      estado.orden = variante.modo === 'elegidos' ? 'nombre' : variante.columnas[0];
+      construirTabs(id);
+      construirFiltros(id);
+      pintar(id);
+    });
+    boton.addEventListener('keydown', (evento) => {
+      const indice = variantes.findIndex((item) => item.id === variante.id);
+      let destino = null;
+      if (evento.key === 'ArrowRight') destino = (indice + 1) % variantes.length;
+      else if (evento.key === 'ArrowLeft') destino = (indice - 1 + variantes.length) % variantes.length;
+      else if (evento.key === 'Home') destino = 0;
+      else if (evento.key === 'End') destino = variantes.length - 1;
+      if (destino === null) return;
+      evento.preventDefault();
+      const siguiente = variantes[destino];
+      estado.variante = siguiente.id;
+      estado.orden = siguiente.modo === 'elegidos' ? 'nombre' : siguiente.columnas[0];
+      construirTabs(id);
+      construirFiltros(id);
+      pintar(id);
+      document.getElementById(`${id}-tab-${siguiente.id}`)?.focus();
+    });
+    return boton;
+  });
+  mapa.tabs.append(...botones);
+}
+
+function construirFiltros(id) {
+  const vista = VISTAS[id];
+  const mapa = refsDe(id);
+  const estado = estadoDe(id);
+  const variante = vista.variantes.find((item) => item.id === estado.variante) ?? vista.variantes[0];
+  estado.variante = variante.id;
+  normalizarEstado(vista, variante, estado);
+
+  mapa.filtros.replaceChildren();
+  const form = crear('form', { class: 'filters', role: 'search', 'aria-label': `Filtros de ${vista.titulo}` });
+  form.addEventListener('submit', (evento) => evento.preventDefault());
+
+  const nuevoSelect = (nombre, etiqueta, valor, opciones, deshabilitadas) => {
+    const select = crear('select', { id: `${id}-${nombre}`, name: nombre });
+    llenarSelect(select, opciones, valor, deshabilitadas);
+    const label = crear('label', { for: `${id}-${nombre}`, text: etiqueta }, [select]);
+    form.append(label);
+    return select;
+  };
+
+  const periodoSelect = nuevoSelect(
+    'periodo',
+    'Período',
+    estado.periodo,
+    Datos.datosActuales().dignidades[vista.periodosDe].periodos.map((periodo) => ({
+      value: periodo.id,
+      label: periodo.disabled ? `${periodo.label} (no activado)` : periodo.label,
+    })),
+    new Set(
+      Datos.datosActuales().dignidades[vista.periodosDe].periodos
+        .filter((periodo) => periodo.disabled)
+        .map((periodo) => periodo.id),
+    ),
+  );
+
+  const config = configTerritorio(vista, variante);
+  let territorioSelect = null;
+  let subdivisionSelect = null;
+  if (config && !vista.sinTerritorio) {
+    const territorios = Datos.territorios(config.tipos);
+    territorioSelect = nuevoSelect(
+      'territorio',
+      config.label,
+      estado.territorio,
+      territorios.map((territorio) => ({ value: territorio.id, label: territorio.nombre })),
+      new Set(),
+    );
+    const territorio = territorios.find((item) => item.id === estado.territorio) ?? null;
+    const subdivisions = Datos.subdivisiones(territorio, config.subdivision);
+    subdivisionSelect = nuevoSelect(
+      'subdivision',
+      config.subLabel,
+      estado.subdivision,
+      subdivisions.map((sub) => ({ value: sub.id, label: sub.nombre })),
+      new Set(),
+    );
+    subdivisionSelect.disabled = subdivisions.length <= 1;
+  }
+
+  const buscar = crear('input', {
+    id: `${id}-buscar`,
+    name: 'buscar',
+    type: 'search',
+    placeholder: 'Nombre, lista o sigla',
+    autocomplete: 'off',
+  });
+  buscar.value = estado.buscar;
+  form.append(crear('label', { for: `${id}-buscar`, text: 'Buscar' }, [buscar]));
+
+  const ordenSelect = crear('select', { id: `${id}-orden`, name: 'orden' });
+  const ordenes = opcionesOrden(variante, estado);
+  llenarSelect(ordenSelect, ordenes, estado.orden, new Set());
+  form.append(crear('label', { for: `${id}-orden`, text: 'Ordenar por' }, [ordenSelect]));
+
+  mapa.filtros.append(form);
+
+  periodoSelect.addEventListener('change', () => {
+    estado.periodo = periodoSelect.value;
+    pintar(id);
+  });
+
+  if (territorioSelect) {
+    territorioSelect.addEventListener('change', () => {
+      estado.territorio = territorioSelect.value;
+      const territorio = Datos.territorios(config.tipos).find((item) => item.id === estado.territorio);
+      const subdivisions = Datos.subdivisiones(territorio, config.subdivision);
+      estado.subdivision = subdivisions[0]?.id;
+      subdivisionSelect.replaceChildren();
+      for (const sub of subdivisions) subdivisionSelect.add(new Option(sub.nombre, sub.id));
+      if (subdivisions[0]) subdivisionSelect.value = subdivisions[0].id;
+      subdivisionSelect.disabled = subdivisions.length <= 1;
+      normalizarEstado(vista, variante, estado);
+      const ordenActual = estado.orden;
+      llenarSelect(ordenSelect, opcionesOrden(variante, estado), ordenActual, new Set());
+      pintar(id);
+    });
+  }
+
+  if (subdivisionSelect) {
+    subdivisionSelect.addEventListener('change', () => {
+      estado.subdivision = subdivisionSelect.value;
+      normalizarEstado(vista, variante, estado);
+      llenarSelect(ordenSelect, opcionesOrden(variante, estado), estado.orden, new Set());
+      pintar(id);
+    });
+  }
+
+  buscar.addEventListener('input', () => {
+    estado.buscar = buscar.value;
+    pintar(id);
+  });
+
+  ordenSelect.addEventListener('change', () => {
+    estado.orden = ordenSelect.value;
+    pintar(id);
+  });
+
+}
+
+function nodoDe(variante, periodo) {
+  return Datos.datosActuales().resultados?.[variante.dignidad]?.[periodo]?.[variante.key] ?? null;
+}
+
+function nodoResuelto(variante, periodo, estado) {
+  const raiz = nodoDe(variante, periodo);
+  if (!raiz) return null;
+  if (variante.modo === 'elegidos' || variante.alcance === 'nacional') return raiz;
+  if (raiz.candidatos || raiz.listas) return raiz;
+  if (variante.alcance === 'regional') return raiz.territorios?.[estado.territorio] ?? null;
+  return raiz.territorios?.[estado.subdivision] ?? null;
+}
+
+function pintar(id) {
+  const vista = VISTAS[id];
+  const mapa = refsDe(id);
+  const estado = estadoDe(id);
+  if (!Datos.estaCargado()) return;
+
+  if (vista.modo === 'partidos') {
+    const resultado = Tabla.renderPartidos(mapa, Datos.datosActuales());
+    mapa.estado.textContent = resultado.estado;
+    mapa.tabla.hidden = false;
+    if (mapa.reintentar) mapa.reintentar.hidden = true;
+    return;
+  }
+
+  const variante = vista.variantes.find((item) => item.id === estado.variante) ?? vista.variantes[0];
+  normalizarEstado(vista, variante, estado);
+  const nodo = nodoResuelto(variante, estado.periodo, estado);
+  const resultado = Tabla.render(mapa, vista, variante, nodo, estado);
+  mapa.estado.textContent = resultado.estado;
+  mapa.tabla.hidden = !nodo;
+
+  if (mapa.links) {
+    mapa.links.replaceChildren();
+    if (vista.enlaceElegidos) {
+      const enlace = crear('a', { href: `#${vista.enlaceElegidos.vista}`, class: 'link-destacado', text: vista.enlaceElegidos.label });
+      mapa.links.append(enlace);
     }
   }
-  return input;
+  if (mapa.reintentar) mapa.reintentar.hidden = true;
 }
 
-async function loadData() {
-  attemptedLoad = true;
-  const focusWasOnRetry = document.activeElement === retry;
-  table.hidden = true;
-  retry.hidden = true;
-  status.textContent = 'Cargando datos de ejemplo…';
-  for (const control of disabledWhileLoading) control.disabled = true;
+function construirVista(id) {
+  const vista = VISTAS[id];
+  const mapa = refsDe(id);
+  if (mapa.intro && vista.intro) mapa.intro.textContent = vista.intro;
+  construirTabs(id);
+  if (vista.modo === 'partidos' || !Datos.estaCargado()) {
+    if (mapa.estado) {
+      mapa.estado.textContent = Datos.estaCargado()
+        ? ''
+        : errorCarga
+          ? 'No se pudieron cargar los resultados de ejemplo. Intente nuevamente.'
+          : 'Cargando datos de ejemplo…';
+    }
+    if (mapa.reintentar) {
+      mapa.reintentar.hidden = !errorCarga;
+      mapa.reintentar.onclick = errorCarga ? cargarDatos : null;
+    }
+    return;
+  }
+  construirFiltros(id);
+}
 
+function mensajeCarga(texto, esError) {
+  for (const [id, vista] of Object.entries(VISTAS)) {
+    const mapa = refs.get(id);
+    if (!mapa) continue;
+    if (mapa.estado) mapa.estado.textContent = texto;
+    if (mapa.tabla && esError) mapa.tabla.hidden = true;
+    if (mapa.reintentar) {
+      mapa.reintentar.hidden = !esError;
+      mapa.reintentar.onclick = esError ? cargarDatos : null;
+    }
+    if (mapa.filtros) {
+      for (const control of mapa.filtros.querySelectorAll('select, input')) control.disabled = true;
+    }
+    if (vista.modo === 'partidos' && mapa.tabla && esError) mapa.tabla.hidden = true;
+  }
+}
+
+async function cargarDatos() {
+  if (cargando) return;
+  cargando = true;
+  errorCarga = false;
+  mensajeCarga('Cargando datos de ejemplo…', false);
   try {
-    let payload;
-    if (location.protocol === 'file:') {
-      payload = window.datosElectoralesLocales;
-    } else {
-      const response = await fetch('data/ejemplo.json');
-      if (!response.ok) throw new Error('El archivo de datos no está disponible');
-      payload = await response.json();
+    await Datos.cargar();
+    for (const id of Object.keys(VISTAS)) {
+      const mapa = refs.get(id);
+      if (!mapa) continue;
+      if (mapa.reintentar) mapa.reintentar.hidden = true;
+      construirVista(id);
     }
-    data = validateData(payload);
-    setOptions(territory, namesInOrder(data.territorios), 'Total nacional', 'boyaca');
-    for (const control of disabledWhileLoading) control.disabled = false;
-    updateSubdivisions('tunja');
-    render();
-    if (focusWasOnRetry && !screens[2].hidden) period.focus();
-  } catch {
-    data = undefined;
-    table.hidden = true;
-    for (const control of disabledWhileLoading) control.disabled = true;
-    status.textContent = 'No se pudieron cargar los resultados de ejemplo. Intente nuevamente.';
-    retry.hidden = false;
-    if (focusWasOnRetry && !screens[2].hidden) retry.focus();
+    const ruta = rutaActual();
+    if (VISTAS[ruta]) pintar(ruta);
+  } catch (error) {
+    errorCarga = true;
+    mensajeCarga('No se pudieron cargar los resultados de ejemplo. Intente nuevamente.', true);
+  } finally {
+    cargando = false;
   }
 }
 
-document.querySelector('.skip-link').addEventListener('click', (event) => {
-  event.preventDefault();
-  document.querySelector('main section:not([hidden]) h1').focus();
+function rutaActual() {
+  const hash = location.hash.slice(1);
+  return RUTAS.includes(hash) ? hash : 'bienvenida';
+}
+
+function setView(enfoque) {
+  const ruta = rutaActual();
+  for (const [id, seccion] of secciones) seccion.hidden = id !== ruta;
+  const seccion = secciones.get(ruta);
+  if (!seccion) return;
+  const titulo = seccion.querySelector('h1');
+  document.title = ruta === 'bienvenida' ? titulo.textContent : `${titulo.textContent} | Guía Electoral de Colombia`;
+  if (enfoque) {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    titulo.focus({ preventScroll: true });
+  }
+  if (VISTAS[ruta]) {
+    if (!refs.has(ruta)) construirVista(ruta);
+    if (Datos.estaCargado()) pintar(ruta);
+  }
+}
+
+document.querySelector('.skip-link')?.addEventListener('click', (evento) => {
+  evento.preventDefault();
+  seccionActual()?.querySelector('h1')?.focus();
 });
-filters.addEventListener('submit', (event) => event.preventDefault());
-filters.addEventListener('change', (event) => {
-  if (!data) return;
-  if (event.target === territory) updateSubdivisions();
-  render();
-});
-search.addEventListener('input', render);
-retry.addEventListener('click', loadData);
+
+function seccionActual() {
+  return secciones.get(rutaActual());
+}
+
 window.addEventListener('hashchange', () => setView(true));
 setView(false);
+cargarDatos();
