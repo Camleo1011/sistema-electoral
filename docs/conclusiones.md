@@ -1,14 +1,17 @@
 # Conclusiones
 
-1. **Interfaz.** El recorrido conecta tres pantallas y permite consultar la votación nacional y territorial con filtros, búsqueda y orden. El aviso de cifras no oficiales permanece visible en la pantalla de resultados.
-2. **Prueba cruzada.** Pendiente de completar con lo que observe el equipo evaluador durante la prueba real.
-3. **Trabajo con IA.** La transcripción ayudó a localizar los requisitos y la extracción del diseño sirvió para organizar componentes y tokens. El equipo debe añadir qué decisiones revisó o cambió después de ejecutar la interfaz.
+1. **Interfaz.** El prototipo conecta doce pantallas y permite consultar las ocho dignidades del documento de requerimientos: Presidencia, Senado, Cámara, Gobernaciones y Asambleas, Alcaldías y Concejos, Bogotá (Alcalde, Concejo y JAL), Partidos Políticos y Nosotros. Las tablas comparten un renderizador con tres modos: candidaturas simples, listas agrupadas por partido y listas de elegidos. El aviso de cifras no oficiales permanece visible en todos los resultados.
+2. **Datos.** La muestra cubre 32 departamentos con capital y municipios de muestra, Bogotá con sus localidades, Corferias y Cárceles, y consulados por país. Un generador determinista y un verificador automático garantizan que los totales cuadren y que no haya referencias rotas.
+3. **Prueba cruzada.** Pendiente de completar con lo que observe el equipo evaluador durante la prueba real. Los veinte casos del informe ya cubren todas las pantallas.
+4. **Trabajo con IA.** La transcripción de los PDF permitió extraer requisitos y columnas; el equipo decidió ampliar el alcance a todas las dignidades y mantener JavaScript nativo. Las correcciones de alineación de totales, `aria-controls` y nombre de regiones salieron de la verificación automática.
 
 ## Demostración de tres minutos
 
 | Tiempo | Acción |
 | --- | --- |
-| 0:00–0:40 | Abrir la bienvenida, entrar al menú y seleccionar Presidencia. Explicar el alcance. |
-| 0:40–1:45 | Cambiar de vuelta, elegir Boyacá y Tunja y mostrar el total y la fórmula ganadora. |
-| 1:45–2:25 | Buscar un nombre sin tilde, mostrar el estado vacío y recuperar la lista. |
-| 2:25–3:00 | Explicar por qué se usó JavaScript sin bibliotecas y mencionar el hallazgo principal de la prueba cruzada cuando se haya realizado. |
+| 0:00–0:30 | Abrir la bienvenida, entrar al menú y mostrar que están activas todas las dignidades. |
+| 0:30–1:10 | Presidencia: cambiar de vuelta, elegir Boyacá/Tunja y mostrar el ganador en segunda vuelta. |
+| 1:10–1:50 | Senado: alternar circunscripción, mostrar listas por partido y elegidos; abrir la lista de elegidos. |
+| 1:50–2:20 | Cámara: cambiar a circunscripción Exterior y mostrar cómo los filtros pasan a consulados y países. |
+| 2:20–2:40 | Bogotá: alternar Alcalde, Concejo y JAL; buscar un nombre. |
+| 2:40–3:00 | Explicar por qué se usó JavaScript sin bibliotecas y mencionar el verificador de datos y la auditoría axe. |
